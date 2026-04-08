@@ -1,0 +1,217 @@
+/* Video Studio Styles */
+
+:root {
+    --player-bg: #000;
+    --timeline-bg: #1a1a24;
+    --track-bg: #2a2a35;
+    --trim-color: #6366f1;
+    --trim-handle: #818cf8;
+}
+
+.app-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-lg);
+    align-items: start;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(10px);
+}
+.loading-overlay.hidden { display: none !important; }
+
+/* Progress Bar */
+.progress-container {
+    width: 100%;
+    max-width: 400px;
+    height: 8px;
+    background: var(--track-bg);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--gradient-primary);
+    transition: width 0.3s ease;
+}
+.progress-bar.active {
+    background-size: 200% 200%;
+    animation: shimmer 2s linear infinite;
+}
+
+/* Drop Zone */
+.drop-zone {
+    text-align: center;
+    padding: 4rem 2rem;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    background: var(--bg-surface);
+}
+.drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-subtle);
+}
+.drop-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+/* Player Area */
+.player-container {
+    display: flex;
+    flex-direction: column;
+}
+
+#videoPreview {
+    width: 100%;
+    max-height: 50vh;
+    background: var(--player-bg);
+    border-radius: var(--radius-md);
+    outline: none;
+}
+
+/* Timeline Components */
+.timeline-container {
+    background: var(--timeline-bg);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.timeline-ruler {
+    height: 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+    position: relative;
+    background-image: linear-gradient(90deg, transparent 99%, #444 100%);
+    background-size: 10% 100%;
+}
+
+.timeline-track {
+    position: relative;
+    height: 48px;
+    background: var(--track-bg);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    cursor: pointer;
+}
+
+/* Trim Selection Box */
+.trim-selection {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background: rgba(99, 102, 241, 0.2);
+    border-top: 2px solid var(--trim-color);
+    border-bottom: 2px solid var(--trim-color);
+    box-sizing: border-box;
+    cursor: grab;
+}
+.trim-selection:active { cursor: grabbing; }
+
+/* Trim Handles */
+.trim-handle {
+    position: absolute;
+    top: 0;
+    width: 12px;
+    height: 100%;
+    background: var(--trim-color);
+    cursor: ew-resize;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.trim-handle::after {
+    content: '';
+    width: 2px;
+    height: 16px;
+    background: #fff;
+    border-radius: 1px;
+}
+.trim-handle.left { left: 0; border-radius: 4px 0 0 4px; }
+.trim-handle.right { right: 0; border-radius: 0 4px 4px 0; }
+
+.trim-handle:hover, .trim-handle:active {
+    background: var(--trim-handle);
+}
+
+/* Current Playhead */
+.playhead {
+    position: absolute;
+    top: -5px; /* stick out above track */
+    bottom: 0;
+    width: 2px;
+    background: #ef4444; /* Red playhead */
+    left: 0;
+    z-index: 3;
+    pointer-events: none; /* Let clicks pass to track */
+}
+.playhead::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -4px;
+    width: 10px;
+    height: 10px;
+    background: #ef4444;
+    border-radius: 50%;
+}
+
+
+/* Tools Panel */
+.tool-section {
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--border);
+}
+.tool-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.tool-section h4 {
+    font-size: 0.9rem;
+    color: var(--text);
+    margin-bottom: var(--space-xs);
+}
+
+.tool-section label {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    gap: 4px;
+}
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+.float-right { float: right; color: var(--accent); }
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    .app-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .right-col {
+        order: -1; /* tools above video on small screens or keep below */
+    }
+}
