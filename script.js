@@ -1,440 +1,220 @@
-/* Video Studio script */
 'use strict';
-
-// Dynamic imports — loaded lazily to prevent blocking page render
-let FFmpeg = null;
-let fetchFile = null;
-
-const $ = s => document.querySelector(s);
-let ffmpeg = null;
-
-    let originalFile = null;
-    let videoDuration = 0;
+(function(){
+    const $ = s => document.querySelector(s);
     
-    // Trimming State
-    let trimStart = 0; // seconds
-    let trimEnd = 0; // seconds
-    
-    // Timeline dragging state
-    let isDragging = null; // 'left', 'right', 'center', null
-    let dragStartX = 0;
-    let initialTrimStart = 0;
-    let initialTrimEnd = 0;
-
-    // --- DOM Elements ---
+    // UI
     const dropZone = $('#dropZone');
     const fileInput = $('#fileInput');
-    const video = $('#videoPreview');
-    const toolsPanel = $('#toolsPanel');
-    const playerWrap = $('#playerWrap');
-
-    const timelineTrack = $('#timelineTrack');
-    const trimSelection = $('#trimSelection');
-    const trimHandleL = $('#trimHandleL');
-    const trimHandleR = $('#trimHandleR');
-    const playhead = $('#playhead');
+    const editorWrap = $('#editorWrap');
+    const videoPreview = $('#videoPreview');
+    const loadingOverlay = $('#loadingOverlay');
     
-    // Format helpers
-    function fmtFrame(sec) {
-        const m = Math.floor(sec / 60).toString().padStart(2, '0');
-        const s = Math.floor(sec % 60).toString().padStart(2, '0');
-        const ms = Math.floor((sec % 1) * 100).toString().padStart(2, '0');
-        return `${m}:${s}.${ms}`;
-    }
+    const resizeOpt = $('#resizeOpt');
+    const trimStart = $('#trimStart');
+    const trimEnd = $('#trimEnd');
+    const muteVideoChk = $('#muteVideoChk');
+    const formatOpt = $('#formatOpt');
+    
+    const extractAudioBtn = $('#extractAudioBtn');
+    const exportBtn = $('#exportBtn');
+    
+    const progressWrap = $('#progressWrap');
+    const exportStatus = $('#exportStatus');
+    const exportPct = $('#exportPct');
+    const exportProgress = $('#exportProgress');
+    
+    const resultModal = $('#resultModal');
+    const downloadLink = $('#downloadLink');
+    
+    // Core state
+    let FFmpeg = null;
+    let fetchFile = null;
+    let ffmpegInst = null;
+    let activeFile = null;
+    let activeFileName = '';
+    let duration = 0;
 
-    // Hide loading overlay immediately — FFmpeg loads on-demand when user drops a file
-    const overlay = $('#loadingOverlay');
-    if (overlay) overlay.classList.add('hidden');
-
-    // --- FFmpeg Initialization (lazy, on-demand) ---
+    // Load FFmpeg dynamically
     async function loadFFmpeg() {
-        if (ffmpeg) return true;
+        if(ffmpegInst) return true;
+        loadingOverlay.classList.remove('hidden');
         try {
-            // Show loading overlay
-            if (overlay) {
-                overlay.classList.remove('hidden');
-                overlay.innerHTML = `
-                    <h2>⏳ Loading Editor Core...</h2>
-                    <p class="text-muted text-small mt-2">Downloading processing engine (first time only).</p>
-                    <div class="progress-container mt-3"><div class="progress-bar" id="loadProgress"></div></div>
-                    <button id="skipLoadBtn" class="btn btn-secondary mt-3" style="font-size:13px;">Skip — use basic mode</button>
-                `;
-                const skipBtn = $('#skipLoadBtn');
-                if (skipBtn) skipBtn.addEventListener('click', () => {
-                    overlay.classList.add('hidden');
-                });
-            }
-
-            // Dynamic import with timeout
-            const loadWithTimeout = Promise.race([
-                (async () => {
+            // Provide a graceful fallback to a promise race (timeout after 20s if CDN fails)
+            const p = new Promise(async (resolve, reject) => {
+                const t = setTimeout(()=>reject(new Error("FFmpeg script CDN timeout")), 20000);
+                try {
                     const ffmpegMod = await import('https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/esm/index.js');
                     const utilMod = await import('https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js');
-                    return { FFmpegClass: ffmpegMod.FFmpeg, fetchFileFn: utilMod.fetchFile };
-                })(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
-            ]);
-
-            const { FFmpegClass, fetchFileFn } = await loadWithTimeout;
-            FFmpeg = FFmpegClass;
-            fetchFile = fetchFileFn;
-
-            ffmpeg = new FFmpeg();
-            
-            ffmpeg.on('progress', ({ progress, time }) => {
-                const pct = Math.max(0, Math.min(100, Math.round(progress * 100)));
-                const bar = $('#exportProgress');
-                const status = $('#exportStatus');
-                if (bar) bar.style.width = `${pct}%`;
-                if (status) status.textContent = `Processing: ${pct}%`;
+                    clearTimeout(t);
+                    resolve({ f: ffmpegMod.FFmpeg, util: utilMod.fetchFile });
+                } catch(e) { reject(e); }
             });
 
-            await ffmpeg.load({
+            const lib = await p;
+            FFmpeg = lib.f;
+            fetchFile = lib.util;
+            
+            ffmpegInst = new FFmpeg();
+            
+            ffmpegInst.on('progress', ({ progress, time }) => {
+                const pct = Math.max(0, Math.min(100, Math.round(progress * 100)));
+                exportProgress.style.width = pct + '%';
+                exportPct.textContent = pct + '%';
+            });
+            
+            ffmpegInst.on('log', ({ message }) => {
+                console.log(message);
+            });
+
+            await ffmpegInst.load({
                 coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
                 wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm'
             });
-
-            const bar = $('#loadProgress');
-            if (bar) bar.style.width = '100%';
-            setTimeout(() => {
-                if (overlay) overlay.classList.add('hidden');
-            }, 500);
+            
+            loadingOverlay.classList.add('hidden');
             return true;
         } catch (e) {
-            console.warn('FFmpeg load failed (expected on most hosts):', e.message);
-            if (overlay) {
-                overlay.innerHTML = `<h2>🎬 Basic Mode Active</h2><p class="text-muted mt-2">Advanced processing unavailable. You can still preview and trim videos locally.</p><button id="dismissLoadBtn" class="btn btn-primary mt-3">Continue</button>`;
-                const btn = $('#dismissLoadBtn');
-                if (btn) btn.addEventListener('click', () => overlay.classList.add('hidden'));
-            }
+            console.error(e);
+            loadingOverlay.innerHTML = `<h2 class="text-neon-red">Error Loading Processing Core</h2><p class="mt-2 text-muted">Failed to load WebAssembly FFmpeg from CDN. Please check adblockers or network.</p><button onclick="location.reload()" class="btn btn-secondary mt-4">Retry</button>`;
             return false;
         }
     }
 
-    // --- File Handling ---
-    dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-    dropZone.addEventListener('drop', e => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-    });
-    fileInput.addEventListener('change', e => {
-        if (e.target.files.length) handleFile(e.target.files[0]);
-    });
-
-    function handleFile(file) {
-        if (!file.type.startsWith('video/')) {
-            alert('Please select a valid video file.');
-            return;
-        }
+    async function handleFile(file) {
+        if(!file) return;
+        if(!file.type.startsWith('video/')) return alert('Please drop a valid video file.');
         
-        // 2GB limit for WASM stability
-        if (file.size > 2 * 1024 * 1024 * 1024) {
-            alert('File too large. Please select a video under 2GB.');
-            return;
-        }
-
-        originalFile = file;
+        const loaded = await loadFFmpeg();
+        if(!loaded) return;
+        
+        activeFile = file;
+        activeFileName = file.name.replace(/\s+/g, '_');
+        
         const url = URL.createObjectURL(file);
-        video.src = url;
-
-        // Auto load FFmpeg when file is selected
-        loadFFmpeg();
-
-        // Update UI
-        dropZone.style.display = 'none';
-        playerWrap.classList.remove('hidden');
-        toolsPanel.style.opacity = '1';
-        toolsPanel.style.pointerEvents = 'auto';
-
-        $('#infoSize').textContent = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+        videoPreview.src = url;
+        
+        videoPreview.onloadedmetadata = () => {
+            duration = videoPreview.duration;
+            trimEnd.value = duration.toFixed(1);
+            trimEnd.max = duration.toFixed(1);
+            trimStart.max = duration.toFixed(1);
+            
+            dropZone.classList.add('hidden');
+            editorWrap.classList.remove('hidden');
+        };
     }
 
-    // --- Video Metadata ---
-    video.addEventListener('loadedmetadata', () => {
-        videoDuration = video.duration;
-        trimStart = 0;
-        trimEnd = videoDuration;
-        
-        $('#infoDur').textContent = fmtFrame(videoDuration);
-        $('#infoRes').textContent = `${video.videoWidth} x ${video.videoHeight}`;
-        
-        // Reset Trim UI
-        trimSelection.style.left = '0%';
-        trimSelection.style.width = '100%';
-        updateTimelineLabels();
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => {
+        if(e.target.files.length) handleFile(e.target.files[0]);
+    });
+    
+    document.addEventListener('dragover', e => e.preventDefault());
+    document.addEventListener('drop', e => {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if(files.length) handleFile(files[0]);
     });
 
-    video.addEventListener('timeupdate', () => {
-        const pct = (video.currentTime / videoDuration) * 100;
-        playhead.style.left = `${pct}%`;
-        
-        // Loop within trim range if playing
-        if (!video.paused) {
-            if (video.currentTime > trimEnd) {
-                video.currentTime = trimStart;
-            }
-            if (video.currentTime < trimStart) {
-                video.currentTime = trimStart;
-            }
+    $('#resetParamsBtn').addEventListener('click', () => {
+        resizeOpt.value = 'original';
+        if(duration) {
+            trimStart.value = '0';
+            trimEnd.value = duration.toFixed(1);
         }
+        muteVideoChk.checked = false;
+        formatOpt.value = 'mp4';
     });
 
-    // --- Timeline Interactions ---
-    function updateTrimUI() {
-        const startPct = (trimStart / videoDuration) * 100;
-        const widthPct = ((trimEnd - trimStart) / videoDuration) * 100;
+    async function executeFFmpeg(args, outName) {
+        progressWrap.classList.remove('hidden');
+        exportBtn.disabled = true;
+        extractAudioBtn.disabled = true;
+        exportStatus.textContent = "Writing file to memory...";
         
-        trimSelection.style.left = `${startPct}%`;
-        trimSelection.style.width = `${widthPct}%`;
-        updateTimelineLabels();
-    }
-
-    function updateTimelineLabels() {
-        $('#timeStart').textContent = fmtFrame(trimStart);
-        $('#timeEnd').textContent = fmtFrame(trimEnd);
-        $('#timeDuration').textContent = fmtFrame(trimEnd - trimStart);
-    }
-
-    // Drag handlers
-    function getMouseXRelative(e) {
-        const rect = timelineTrack.getBoundingClientRect();
-        let x = e.clientX - rect.left;
-        return Math.max(0, Math.min(x, rect.width)) / rect.width; // 0 to 1
-    }
-
-    trimHandleL.addEventListener('mousedown', e => {
-        e.stopPropagation();
-        isDragging = 'left';
-        video.pause();
-    });
-
-    trimHandleR.addEventListener('mousedown', e => {
-        e.stopPropagation();
-        isDragging = 'right';
-        video.pause();
-    });
-
-    trimSelection.addEventListener('mousedown', e => {
-        // Prevent if we clicked a handle
-        if (e.target.classList.contains('trim-handle')) return;
-        isDragging = 'center';
-        dragStartX = getMouseXRelative(e);
-        initialTrimStart = trimStart;
-        initialTrimEnd = trimEnd;
-        video.pause();
-    });
-
-    window.addEventListener('mousemove', e => {
-        if (!isDragging) return;
+        // Write file
+        await ffmpegInst.writeFile(activeFileName, await fetchFile(activeFile));
         
-        const mouseX = getMouseXRelative(e);
-        const time = mouseX * videoDuration;
-
-        if (isDragging === 'left') {
-            trimStart = Math.min(time, trimEnd - 0.5); // min 0.5s duration
-            video.currentTime = trimStart;
-        } else if (isDragging === 'right') {
-            trimEnd = Math.max(time, trimStart + 0.5);
-            video.currentTime = trimEnd;
-        } else if (isDragging === 'center') {
-            const shift = (mouseX - dragStartX) * videoDuration;
-            const duration = initialTrimEnd - initialTrimStart;
-            
-            let newStart = initialTrimStart + shift;
-            let newEnd = initialTrimEnd + shift;
-            
-            // Bounds check
-            if (newStart < 0) {
-                newStart = 0;
-                newEnd = duration;
-            } else if (newEnd > videoDuration) {
-                newEnd = videoDuration;
-                newStart = videoDuration - duration;
-            }
-            
-            trimStart = newStart;
-            trimEnd = newEnd;
-            video.currentTime = trimStart;
-        }
+        exportStatus.textContent = "Processing video...";
+        exportProgress.style.width = '0%';
+        exportPct.textContent = '0%';
         
-        updateTrimUI();
-    });
-
-    window.addEventListener('mouseup', () => {
-        isDragging = null;
-    });
-
-    // Click track to jump
-    timelineTrack.addEventListener('click', e => {
-        if (e.target.closest('.trim-selection')) return; // handled by drag
-        const pct = getMouseXRelative(e);
-        video.currentTime = pct * videoDuration;
-    });
-
-    // Tools logic
-    $('#outSpeed').addEventListener('input', e => {
-        $('#speedDisplay').textContent = Number(e.target.value).toFixed(2) + 'x';
-    });
-
-    // --- Export Logic ---
-    async function executeFFmpeg(args, outputName) {
-        if(!ffmpeg) { alert("FFmpeg is still loading..."); return; }
-        
-        $('#exportPanel').classList.remove('hidden');
-        $('#startExportBtn').disabled = true;
-        $('#startExportBtn').textContent = 'Processing...';
-        $('#exportActions').style.display = 'none';
-        $('#exportError').classList.add('hidden');
-        $('#exportProgress').classList.add('active');
-        $('#exportProgress').style.width = '0%';
-        $('#exportStatus').textContent = 'Writing input file...';
-
         try {
-            const inputName = `input_${Date.now()}` + originalFile.name.substring(originalFile.name.lastIndexOf('.'));
+            await ffmpegInst.exec(args);
             
-            // Write file
-            await ffmpeg.writeFile(inputName, await fetchFile(originalFile));
+            const data = await ffmpegInst.readFile(outName);
+            const mime = outName.endsWith('.mp3') ? 'audio/mp3' : outName.endsWith('.webm') ? 'video/webm' : outName.endsWith('.gif') ? 'image/gif' : 'video/mp4';
+            const blob = new Blob([data.buffer], { type: mime });
+            const url = URL.createObjectURL(blob);
             
-            $('#exportStatus').textContent = 'Executing task...';
-
-            // Replace placeholder in args
-            const finalArgs = [];
-            for (let i=0; i<args.length; i++) {
-                if (args[i] === '_INPUT_') finalArgs.push(inputName);
-                else finalArgs.push(args[i]);
-            }
-            finalArgs.push(outputName);
-
-            console.log("running:", finalArgs.join(" "));
+            downloadLink.href = url;
+            downloadLink.download = outName;
             
-            await ffmpeg.exec(finalArgs);
-
-            // Read output
-            $('#exportStatus').textContent = 'Reading output...';
-            const data = await ffmpeg.readFile(outputName);
-
-            // Cleanup MEMFS
-            await ffmpeg.deleteFile(inputName);
-            await ffmpeg.deleteFile(outputName);
-
-            // Create download
-            const ext = outputName.split('.').pop();
-            const blobType = ext === 'mp3' ? 'audio/mpeg' : (ext === 'gif' ? 'image/gif' : 'video/' + ext);
+            resultModal.classList.remove('hidden');
             
-            const url = URL.createObjectURL(new Blob([data.buffer], { type: blobType }));
-            const a = $('#downloadLink');
-            a.href = url;
-            a.download = `quickutils_${Math.floor(Date.now()/1000)}.${ext}`;
-            
-            $('#exportStatus').textContent = 'Complete! 🎉';
-            $('#exportActions').style.display = 'block';
-            $('#exportProgress').classList.remove('active');
-            $('#exportProgress').style.width = '100%';
-
-        } catch (err) {
-            console.error(err);
-            $('#exportStatus').textContent = 'Error occurred';
-            $('#exportProgress').classList.remove('active');
-            $('#exportError').textContent = err.message || "Failed to process video.";
-            $('#exportError').classList.remove('hidden');
+        } catch(e) {
+            alert("An error occurred during rendering. See console for details.");
+            console.error(e);
         } finally {
-            $('#startExportBtn').disabled = false;
-            $('#startExportBtn').textContent = '🚀 Export Video';
+            progressWrap.classList.add('hidden');
+            exportBtn.disabled = false;
+            extractAudioBtn.disabled = false;
         }
     }
 
-    $('#startExportBtn').addEventListener('click', async () => {
-        const outFormat = $('#outFormat').value; // mp4, webm, mkv, gif
-        const res = $('#outRes').value; // 'original' or 'w:-2'
-        const rot = $('#outRot').value; // '0', '90', '180', '270'
-        const speed = parseFloat($('#outSpeed').value);
-        const crf = $('#outCrf').value;
-        const mute = $('#muteAudio').checked;
-        
-        let args = [
-            '-i', '_INPUT_',
-        ];
-
-        // Trim
-        if (trimStart > 0.1 || trimEnd < videoDuration - 0.1) {
-             // We put -ss before -i for fast seek, but after for accuracy. 
-             // Doing it after -i here for simplicity/accuracy as clips are <2GB
-             args.push('-ss', String(trimStart));
-             args.push('-t', String(trimEnd - trimStart));
-        }
-
-        // Setup filter graph
-        let vfilters = [];
-        let afilters = [];
-
-        // Resolution
-        if (res !== 'original') {
-            vfilters.push(`scale=${res}`);
-        }
-
-        // Rotation
-        if (rot === '90') vfilters.push('transpose=1');
-        else if (rot === '180') vfilters.push('transpose=1,transpose=1'); /* flip */
-        else if (rot === '270') vfilters.push('transpose=2');
-
-        // Speed
-        if (speed !== 1.0) {
-            vfilters.push(`setpts=${1/speed}*PTS`);
-            afilters.push(`atempo=${speed}`);
-        }
-
-        if (vfilters.length > 0) {
-            args.push('-vf', vfilters.join(','));
-        }
-
-        if (mute) {
-            args.push('-an');
-        } else if (afilters.length > 0) {
-             // atempo only works inside 0.5 and 2.0 limits per filter, we might need chaining for extreme speeds, simplified here.
-             if (speed < 0.5 || speed > 2.0) {
-                 // simplify: mute extreme speeds if filter chain gets complex, or ignore audio
-                 args.push('-an'); 
-                 console.warn("Muted audio due to extreme speed limits in basic FFmpeg.");
-             } else {
-                 args.push('-af', afilters.join(','));
-             }
-        }
-
-        if (outFormat === 'gif') {
-            // Special params for decent GIF
-            args.push('-loop', '0');
-        } else {
-            // Quality
-            args.push('-crf', crf);
-            // Default fast web settings for mp4
-            if (outFormat === 'mp4') {
-               args.push('-preset', 'fast');
-               args.push('-c:v', 'libx264');
-               args.push('-c:a', 'aac');
-            }
-        }
-
-        await executeFFmpeg(args, `output.${outFormat}`);
+    extractAudioBtn.addEventListener('click', () => {
+        if(!activeFile) return;
+        const out = activeFileName.split('.')[0] + '_audio.mp3';
+        // Basic extract without re-encoding video
+        const args = ['-i', activeFileName, '-q:a', '0', '-map', 'a', out];
+        executeFFmpeg(args, out);
     });
 
-    $('#extractAudioBtn').addEventListener('click', async () => {
-        let args = ['-i', '_INPUT_'];
+    exportBtn.addEventListener('click', () => {
+        if(!activeFile) return;
+        const fmt = formatOpt.value;
+        const out = activeFileName.split('.')[0] + '_processed.' + fmt;
         
-        if (trimStart > 0.1 || trimEnd < videoDuration - 0.1) {
-             args.push('-ss', String(trimStart));
-             args.push('-t', String(trimEnd - trimStart));
+        const args = [];
+        
+        // Input
+        // Calculate Trim
+        const tS = parseFloat(trimStart.value) || 0;
+        const tE = parseFloat(trimEnd.value) || duration;
+        
+        if (tS > 0) {
+            args.push('-ss', tS.toString());
+        }
+        args.push('-i', activeFileName);
+        
+        if (tE < duration && tE > tS) {
+            args.push('-t', (tE - tS).toString());
         }
         
-        args.push('-q:a', '0', '-map', 'a');
-        await executeFFmpeg(args, 'audio.mp3');
+        // Flags
+        const filters = [];
+        
+        if(resizeOpt.value !== 'original') {
+            filters.push(`scale=${resizeOpt.value}`);
+        }
+        if(fmt === 'gif') {
+            filters.push('fps=10', 'scale=320:-1:flags=lanczos', 'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse');
+        }
+        
+        if (filters.length > 0) {
+            args.push('-vf', filters.join(','));
+        }
+        
+        // Audio handling
+        if(fmt === 'gif' || muteVideoChk.checked) {
+            args.push('-an'); // remove audio
+        } else if (fmt !== 'gif') {
+            args.push('-c:a', 'copy'); // try direct copy 
+        }
+        
+        args.push(out);
+        executeFFmpeg(args, out);
     });
 
-    $('#newEditBtn').addEventListener('click', () => {
-        $('#exportPanel').classList.add('hidden');
-    });
-
-    // --- Init ---
-    if(typeof QU !== 'undefined') QU.init({ kofi: true, discover: true });
+    if(typeof QU !== 'undefined') QU.init({ kofi: true, theme: true });
+})();
