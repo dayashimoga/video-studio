@@ -1,9 +1,9 @@
 /* Video Studio script */
 'use strict';
 
-
-import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/esm/index.js';
-import { fetchFile } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
+// Dynamic imports — loaded lazily to prevent blocking page render
+let FFmpeg = null;
+let fetchFile = null;
 
 const $ = s => document.querySelector(s);
 let ffmpeg = null;
@@ -42,16 +42,51 @@ let ffmpeg = null;
         return `${m}:${s}.${ms}`;
     }
 
-    // --- FFmpeg Initialization ---
+    // Hide loading overlay immediately — FFmpeg loads on-demand when user drops a file
+    const overlay = $('#loadingOverlay');
+    if (overlay) overlay.classList.add('hidden');
+
+    // --- FFmpeg Initialization (lazy, on-demand) ---
     async function loadFFmpeg() {
         if (ffmpeg) return true;
         try {
+            // Show loading overlay
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                overlay.innerHTML = `
+                    <h2>⏳ Loading Editor Core...</h2>
+                    <p class="text-muted text-small mt-2">Downloading processing engine (first time only).</p>
+                    <div class="progress-container mt-3"><div class="progress-bar" id="loadProgress"></div></div>
+                    <button id="skipLoadBtn" class="btn btn-secondary mt-3" style="font-size:13px;">Skip — use basic mode</button>
+                `;
+                const skipBtn = $('#skipLoadBtn');
+                if (skipBtn) skipBtn.addEventListener('click', () => {
+                    overlay.classList.add('hidden');
+                });
+            }
+
+            // Dynamic import with timeout
+            const loadWithTimeout = Promise.race([
+                (async () => {
+                    const ffmpegMod = await import('https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/esm/index.js');
+                    const utilMod = await import('https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js');
+                    return { FFmpegClass: ffmpegMod.FFmpeg, fetchFileFn: utilMod.fetchFile };
+                })(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
+            ]);
+
+            const { FFmpegClass, fetchFileFn } = await loadWithTimeout;
+            FFmpeg = FFmpegClass;
+            fetchFile = fetchFileFn;
+
             ffmpeg = new FFmpeg();
             
             ffmpeg.on('progress', ({ progress, time }) => {
                 const pct = Math.max(0, Math.min(100, Math.round(progress * 100)));
-                $('#exportProgress').style.width = `${pct}%`;
-                $('#exportStatus').textContent = `Processing: ${pct}%`;
+                const bar = $('#exportProgress');
+                const status = $('#exportStatus');
+                if (bar) bar.style.width = `${pct}%`;
+                if (status) status.textContent = `Processing: ${pct}%`;
             });
 
             await ffmpeg.load({
@@ -59,14 +94,19 @@ let ffmpeg = null;
                 wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm'
             });
 
-            $('#loadProgress').style.width = '100%';
+            const bar = $('#loadProgress');
+            if (bar) bar.style.width = '100%';
             setTimeout(() => {
-                $('#loadingOverlay').classList.add('hidden');
+                if (overlay) overlay.classList.add('hidden');
             }, 500);
             return true;
         } catch (e) {
-            console.error(e);
-            $('#loadingOverlay').innerHTML = `<h2>⚠️ Error loading engine</h2><p class="text-muted mt-2">Could not load FFmpeg. Check console for details.</p>`;
+            console.warn('FFmpeg load failed (expected on most hosts):', e.message);
+            if (overlay) {
+                overlay.innerHTML = `<h2>🎬 Basic Mode Active</h2><p class="text-muted mt-2">Advanced processing unavailable. You can still preview and trim videos locally.</p><button id="dismissLoadBtn" class="btn btn-primary mt-3">Continue</button>`;
+                const btn = $('#dismissLoadBtn');
+                if (btn) btn.addEventListener('click', () => overlay.classList.add('hidden'));
+            }
             return false;
         }
     }
