@@ -1,12 +1,12 @@
 /* Video Studio script */
 'use strict';
 
-(function() {
-    const $ = s => document.querySelector(s);
 
-    // --- State ---
-    let ffmpeg = null;
-    const { fetchFile } = FFmpegUtil;
+import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/esm/index.js';
+import { fetchFile } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
+
+const $ = s => document.querySelector(s);
+let ffmpeg = null;
 
     let originalFile = null;
     let videoDuration = 0;
@@ -46,7 +46,7 @@
     async function loadFFmpeg() {
         if (ffmpeg) return true;
         try {
-            ffmpeg = new FFmpegWASM.FFmpeg();
+            ffmpeg = new FFmpeg();
             
             ffmpeg.on('progress', ({ progress, time }) => {
                 const pct = Math.max(0, Math.min(100, Math.round(progress * 100)));
@@ -54,10 +54,9 @@
                 $('#exportStatus').textContent = `Processing: ${pct}%`;
             });
 
-            // Need to specify core paths since we load via unpkg CDN
             await ffmpeg.load({
-                coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-                wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
+                coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
+                wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm'
             });
 
             $('#loadProgress').style.width = '100%';
@@ -399,5 +398,3 @@
 
     // --- Init ---
     if(typeof QU !== 'undefined') QU.init({ kofi: true, discover: true });
-
-})();
