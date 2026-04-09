@@ -104,7 +104,9 @@
         };
     }
 
-    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('click', e => {
+        if(e.target !== fileInput) fileInput.click();
+    });
     fileInput.addEventListener('change', e => {
         if(e.target.files.length) handleFile(e.target.files[0]);
     });
