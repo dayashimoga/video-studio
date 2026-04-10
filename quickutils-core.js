@@ -142,60 +142,182 @@ const QU = (() => {
     document.body.appendChild(script);
   }
 
-  // ── Discover More Widget ──
+  // ── Network App Launcher ──
   const NETWORK_SITES = [
-    { emoji: '⌨️', name: 'Typing Test', url: 'https://typing.quickutils.top' },
-    { emoji: '🎨', name: 'Pixel Art', url: 'https://pixelart.quickutils.top' },
-    { emoji: '🎵', name: 'Music Maker', url: 'https://music.quickutils.top' },
-    { emoji: '🍅', name: 'Focus Timer', url: 'https://focus.quickutils.top' },
-    { emoji: '💰', name: 'Budget Tracker', url: 'https://budget.quickutils.top' },
-    { emoji: '✅', name: 'Habit Tracker', url: 'https://habits.quickutils.top' },
-    { emoji: '🌈', name: 'Gradient Studio', url: 'https://gradients.quickutils.top' },
-    { emoji: '🔤', name: 'Regex Playground', url: 'https://regex.quickutils.top' },
-    { emoji: '⚗️', name: 'Periodic Table', url: 'https://elements.quickutils.top' },
-    { emoji: '🌧️', name: 'Ambient Mixer', url: 'https://ambient.quickutils.top' },
-    { emoji: '🔄', name: 'Data Converter', url: 'https://convert.quickutils.top' },
-    { emoji: '📊', name: 'Chart Maker', url: 'https://charts.quickutils.top' },
-    { emoji: '🧪', name: 'Chemistry Lab', url: 'https://chemistry.quickutils.top' },
-    { emoji: '🏆', name: 'Quiz Master', url: 'https://quiz.quickutils.top' },
-    { emoji: '💻', name: 'Code Arena', url: 'https://code.quickutils.top' },
-    { emoji: '🧬', name: 'Life Simulator', url: 'https://life.quickutils.top' },
-    { emoji: '🎮', name: 'Retro Games', url: 'https://games.quickutils.top' },
-    { emoji: '📐', name: 'Unit Converter', url: 'https://units.quickutils.top' },
-    { emoji: '🖌️', name: 'Whiteboard', url: 'https://whiteboard.quickutils.top' },
-    { emoji: '🎯', name: 'CSS Battle', url: 'https://cssbattle.quickutils.top' },
-    { emoji: '📈', name: 'Algorithm Viz', url: 'https://algorithms.quickutils.top' },
-    { emoji: '⚡', name: 'Circuit Designer', url: 'https://circuits.quickutils.top' },
-    { emoji: '🎨', name: 'Color Palette', url: 'https://colors.quickutils.top' },
-    { emoji: '📝', name: 'Markdown Editor', url: 'https://markdown.quickutils.top' },
-    { emoji: '🔬', name: 'Physics Sandbox', url: 'https://physics.quickutils.top' },
-    { emoji: '📉', name: 'Math Grapher', url: 'https://grapher.quickutils.top' },
-    { emoji: '🔍', name: 'JSON Explorer', url: 'https://json.quickutils.top' },
-    { emoji: '🕐', name: 'Cron Builder', url: 'https://cron.quickutils.top' },
-    { emoji: '😄', name: 'Emoji Kitchen', url: 'https://emoji.quickutils.top' },
-    { emoji: '✏️', name: 'ASCII Art', url: 'https://ascii.quickutils.top' },
-    { emoji: '🔐', name: 'Password Fortress', url: 'https://passwords.quickutils.top' },
+    { category: 'Directory', emoji: '📂', name: 'API Status Directory', url: 'https://apistatus.quickutils.top' },
+    { category: 'Directory', emoji: '📂', name: 'Boilerplates Directory', url: 'https://boilerplates.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Boring Website', url: 'https://quickutils.top' },
+    { category: 'Directory', emoji: '📂', name: 'Cheatsheets Directory', url: 'https://cheatsheets.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Daily Facts', url: 'https://facts.quickutils.top' },
+    { category: 'Directory', emoji: '📂', name: 'Datasets Directory', url: 'https://datasets.quickutils.top' },
+    { category: 'Directory', emoji: '📂', name: 'Jobs Directory', url: 'https://jobs.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Market Digest', url: 'https://market.quickutils.top' },
+    { category: 'Directory', emoji: '📂', name: 'Open Source Directory', url: 'https://opensource.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Price Comparator', url: 'https://prices.quickutils.top' },
+    { category: 'Directory', emoji: '📂', name: 'Prompts Directory', url: 'https://prompts.quickutils.top' },
+    { category: 'Directory', emoji: '📂', name: 'API Directory', url: 'https://directory.quickutils.top/' },
+    { category: 'Directory', emoji: '📂', name: 'Tools Directory', url: 'https://tools.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Typing Speed Test', url: 'https://typing.quickutils.top' },
+    { category: 'Developer Tools', emoji: '💻', name: 'Regex Playground', url: 'https://regex.quickutils.top' },
+    { category: 'Productivity', emoji: '✅', name: 'Pomodoro Focus Timer', url: 'https://focus.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Data Converter', url: 'https://convert.quickutils.top' },
+    { category: 'Productivity', emoji: '✅', name: 'Budget Tracker', url: 'https://budget.quickutils.top' },
+    { category: 'Productivity', emoji: '✅', name: 'Habit Tracker', url: 'https://habits.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'CSS Gradient Studio', url: 'https://gradients.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Ambient Sound Mixer', url: 'https://ambient.quickutils.top' },
+    { category: 'Science & Education', emoji: '🔬', name: 'Interactive Periodic Table', url: 'https://elements.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'Pixel Art Editor', url: 'https://pixelart.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'Music Maker', url: 'https://music.quickutils.top' },
+    { category: 'Science & Education', emoji: '🔬', name: 'Chemistry Lab', url: 'https://chemistry.quickutils.top' },
+    { category: 'Developer Tools', emoji: '💻', name: 'Algorithm Visualizer', url: 'https://algorithms.quickutils.top' },
+    { category: 'Developer Tools', emoji: '💻', name: 'Code Arena', url: 'https://code.quickutils.top' },
+    { category: 'Entertainment', emoji: '🎮', name: 'Quiz Master', url: 'https://quiz.quickutils.top' },
+    { category: 'Entertainment', emoji: '🎮', name: 'Life Simulator', url: 'https://life.quickutils.top' },
+    { category: 'Entertainment', emoji: '🎮', name: 'Collaborative Whiteboard', url: 'https://whiteboard.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'Chart Maker', url: 'https://charts.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'CSS Battle', url: 'https://cssbattle.quickutils.top' },
+    { category: 'Entertainment', emoji: '🎮', name: 'Retro Games', url: 'https://games.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Unit Converter', url: 'https://units.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Circuit Designer', url: 'https://circuits.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'Color Palette Generator', url: 'https://colors.quickutils.top' },
+    { category: 'Developer Tools', emoji: '💻', name: 'Markdown Editor', url: 'https://markdown.quickutils.top' },
+    { category: 'Science & Education', emoji: '🔬', name: 'Physics Sandbox', url: 'https://physics.quickutils.top' },
+    { category: 'Science & Education', emoji: '🔬', name: 'Math Grapher', url: 'https://grapher.quickutils.top' },
+    { category: 'Developer Tools', emoji: '💻', name: 'JSON Explorer', url: 'https://json.quickutils.top' },
+    { category: 'Developer Tools', emoji: '💻', name: 'Cron Builder', url: 'https://cron.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'Emoji Kitchen', url: 'https://emoji.quickutils.top' },
+    { category: 'Developer Tools', emoji: '💻', name: 'ASCII Art Studio', url: 'https://ascii.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Password Fortress', url: 'https://passwords.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Text Toolkit', url: 'https://text.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'QR Studio', url: 'https://qr.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Country Explorer', url: 'https://countries.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'Coloring Books', url: 'https://coloring.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'SVG Editor', url: 'https://svg.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Network Tools', url: 'https://nettools.quickutils.top' },
+    { category: 'Productivity', emoji: '✅', name: 'Meal Planner', url: 'https://meals.quickutils.top' },
+    { category: 'Productivity', emoji: '✅', name: 'Invoice Generator', url: 'https://invoices.quickutils.top' },
+    { category: 'Productivity', emoji: '✅', name: 'Resume Builder', url: 'https://resume.quickutils.top' },
+    { category: 'Productivity', emoji: '✅', name: 'Mind Map', url: 'https://mindmap.quickutils.top' },
+    { category: 'Science & Education', emoji: '🔬', name: 'Solar System Explorer', url: 'https://solar.quickutils.top' },
+    { category: 'Science & Education', emoji: '🔬', name: 'DNA Lab', url: 'https://dna.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'Video Studio', url: 'https://video.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Loan Calculator', url: 'https://loan.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'IP Lookup', url: 'https://ip.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'Image Converter', url: 'https://image.quickutils.top' },
+    { category: 'Productivity', emoji: '✅', name: 'Habit Streak', url: 'https://streak.quickutils.top' },
+    { category: 'Entertainment', emoji: '🎮', name: 'Font Playground', url: 'https://fonts.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Flashcard Maker', url: 'https://flashcards.quickutils.top' },
+    { category: 'Developer Tools', emoji: '💻', name: 'Code Diff', url: 'https://diff.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'Sound Board', url: 'https://sounds.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'Drawing Board', url: 'https://draw.quickutils.top' },
+    { category: 'Productivity', emoji: '✅', name: 'World Clock', url: 'https://clock.quickutils.top' },
+    { category: 'Utilities', emoji: '🛠️', name: 'Space Mission Control', url: 'https://spacemission.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🎨', name: 'PDF Studio', url: 'https://pdfstudio.quickutils.top' },
+    { category: 'Productivity', emoji: '🎤', name: 'Subtitle Generator', url: 'https://subtitlegenerator.quickutils.top' },
+    { category: 'Productivity', emoji: '📈', name: 'FIRE Simulator', url: 'https://firesimulator.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🏠', name: '3D Room Planner', url: 'https://roomplanner.quickutils.top' },
+    { category: 'Productivity', emoji: '🏋️', name: 'Workout Architect', url: 'https://workoutarchitect.quickutils.top' },
+    { category: 'Creative Studio', emoji: '🌍', name: 'World Builder', url: 'https://worldbuilder.quickutils.top' },
+    { category: 'Productivity', emoji: '🌱', name: 'Garden Planner', url: 'https://gardenplanner.quickutils.top' },
+    { category: 'Entertainment', emoji: '🎵', name: 'Beat Maker', url: 'https://beatmaker.quickutils.top' },
+    { category: 'Productivity', emoji: '✈️', name: 'Travel Builder', url: 'https://travelbuilder.quickutils.top' },
+    { category: 'Science & Education', emoji: '🗣️', name: 'Language Playground', url: 'https://languageplayground.quickutils.top' },
+    { category: 'Productivity', emoji: '🧘', name: 'Meditation Journey', url: 'https://meditationjourney.quickutils.top' },
   ];
 
-  function initDiscoverBar(currentUrl) {
-    // Filter out current site and pick 3 random
-    const others = NETWORK_SITES.filter(s => !currentUrl.includes(new URL(s.url).hostname));
-    const picks = [];
-    const shuffled = [...others].sort(() => Math.random() - 0.5);
-    for (let i = 0; i < Math.min(3, shuffled.length); i++) picks.push(shuffled[i]);
+  function initNetworkLauncher() {
+    let launcherOverlay = null;
 
-    const bar = document.createElement('div');
-    bar.className = 'qu-discover-bar';
-    bar.innerHTML = `
-      <span class="discover-label">Discover More →</span>
-      ${picks.map(s => `<a href="${s.url}" target="_blank" rel="noopener">${s.emoji} ${s.name}</a>`).join('')}
-      <button class="qu-discover-close" aria-label="Close">✕</button>
-    `;
-    document.body.appendChild(bar);
+    // Create the FAB Button
+    const fabButton = document.createElement('button');
+    fabButton.className = 'qu-launcher-fab';
+    fabButton.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>`;
+    fabButton.setAttribute('aria-label', 'Explore Network');
+    document.body.appendChild(fabButton);
 
-    // Show after 15 seconds
-    setTimeout(() => bar.classList.add('visible'), 15000);
-    bar.querySelector('.qu-discover-close').addEventListener('click', () => bar.classList.remove('visible'));
+    // Grouping sites by category
+    const grouped = {};
+    NETWORK_SITES.forEach(site => {
+        if (!grouped[site.category]) grouped[site.category] = [];
+        grouped[site.category].push(site);
+    });
+
+    let htmlContent = `<div class="qu-launcher-overlay hidden" id="quNetworkLauncher">
+      <div class="qu-launcher-modal">
+        <div class="qu-launcher-header">
+           <h2>Explore QuickUtils</h2>
+           <button class="qu-launcher-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="qu-launcher-search">
+           <input type="text" id="quLauncherSearch" placeholder="Search ${NETWORK_SITES.length} free tools..." autocomplete="off"/>
+        </div>
+        <div class="qu-launcher-content">`;
+    
+    Object.keys(grouped).forEach(cat => {
+        htmlContent += `<div class="qu-launcher-category" data-cat="${cat}">
+           <h3>${cat}</h3>
+           <div class="qu-launcher-grid">`;
+        grouped[cat].forEach(site => {
+            htmlContent += `<a href="${site.url}" target="_blank" rel="noopener" class="qu-launcher-item" data-name="${site.name.toLowerCase()}">
+                <span class="emoji">${site.emoji}</span>
+                <span class="name">${site.name}</span>
+            </a>`;
+        });
+        htmlContent += `</div></div>`;
+    });
+
+    htmlContent += `</div></div></div>`;
+
+    // Append to body effectively
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = htmlContent;
+    document.body.appendChild(wrapper.firstElementChild);
+
+    launcherOverlay = document.getElementById('quNetworkLauncher');
+    const closeBtn = launcherOverlay.querySelector('.qu-launcher-close');
+    const searchInput = document.getElementById('quLauncherSearch');
+    const items = launcherOverlay.querySelectorAll('.qu-launcher-item');
+    const categoriesDivs = launcherOverlay.querySelectorAll('.qu-launcher-category');
+
+    function toggleLauncher() {
+        if (launcherOverlay.classList.contains('hidden')) {
+            launcherOverlay.classList.remove('hidden');
+            setTimeout(() => launcherOverlay.classList.add('visible'), 10);
+            setTimeout(() => searchInput.focus(), 300);
+        } else {
+             launcherOverlay.classList.remove('visible');
+             setTimeout(() => launcherOverlay.classList.add('hidden'), 300);
+             searchInput.value = '';
+             searchInput.dispatchEvent(new Event('input'));
+        }
+    }
+
+    fabButton.addEventListener('click', toggleLauncher);
+    closeBtn.addEventListener('click', toggleLauncher);
+    
+    // Close on backdrop click
+    launcherOverlay.addEventListener('click', (e) => {
+        if (e.target === launcherOverlay) toggleLauncher();
+    });
+
+    // Escape to close
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !launcherOverlay.classList.contains('hidden')) toggleLauncher();
+    });
+
+    // Smart Search
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        items.forEach(item => {
+            const name = item.dataset.name;
+            item.style.display = name.includes(query) ? 'flex' : 'none';
+        });
+        // Hide empty categories
+        categoriesDivs.forEach(catDiv => {
+            const visibleItems = catDiv.querySelectorAll('.qu-launcher-item[style="display: flex;"], .qu-launcher-item:not([style*="none"])');
+            catDiv.style.display = visibleItems.length === 0 && query !== '' ? 'none' : 'block';
+        });
+    });
   }
 
   // ── Keyboard Shortcuts ──
@@ -344,7 +466,7 @@ const QU = (() => {
     initTheme(opts.themeBtn || '#themeBtn');
     if (opts.gaId) initAnalytics(opts.gaId);
     if (opts.kofi !== false) initKofi(opts.kofiUser || 'dayatin');
-    if (opts.discover !== false) initDiscoverBar(window.location.href);
+    if (opts.discover !== false) initNetworkLauncher();
     initKeyboardShortcuts();
     registerShortcuts({ '?': 'Show keyboard shortcuts' });
     initSessionTimer();
@@ -357,7 +479,7 @@ const QU = (() => {
     formatNumber, formatMoney, clamp,
     saveState, loadState,
     initTheme, showToast, copyToClipboard,
-    initAnalytics, initKofi, initDiscoverBar,
+    initAnalytics, initKofi, initNetworkLauncher,
     registerShortcuts, initKeyboardShortcuts,
     UndoStack, init, NETWORK_SITES,
     unlockAchievement, initSessionTimer, initStreak, checkAchievements

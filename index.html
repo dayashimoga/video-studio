@@ -48,6 +48,14 @@
                         <option value="-2:480">480p Light</option>
                     </select>
 
+                    <label>Visual Effects</label>
+                    <select id="effectOpt" class="form-control mb-3">
+                        <option value="none">None</option>
+                        <option value="hue=s=0">Grayscale</option>
+                        <option value="boxblur=5:1">Blur (Light)</option>
+                        <option value="negate">Invert Colors</option>
+                    </select>
+
                     <label>Cut Time (Seconds)</label>
                     <div class="d-flex gap-2 mb-3">
                         <input type="number" id="trimStart" class="form-control" placeholder="Start (s)" min="0" value="0">

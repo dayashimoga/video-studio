@@ -14,7 +14,7 @@
     const trimEnd = $('#trimEnd');
     const muteVideoChk = $('#muteVideoChk');
     const formatOpt = $('#formatOpt');
-    
+    const effectOpt = $('#effectOpt');
     const extractAudioBtn = $('#extractAudioBtn');
     const exportBtn = $('#exportBtn');
     
@@ -43,8 +43,8 @@
             const p = new Promise(async (resolve, reject) => {
                 const t = setTimeout(()=>reject(new Error("FFmpeg script CDN timeout")), 20000);
                 try {
-                    const ffmpegMod = await import('https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/esm/index.js');
-                    const utilMod = await import('https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js');
+                    const ffmpegMod = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/esm/index.js');
+                    const utilMod = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
                     clearTimeout(t);
                     resolve({ f: ffmpegMod.FFmpeg, util: utilMod.fetchFile });
                 } catch(e) { reject(e); }
@@ -67,8 +67,8 @@
             });
 
             await ffmpegInst.load({
-                coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
-                wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm'
+                coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
+                wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm'
             });
             
             loadingOverlay.classList.add('hidden');
@@ -126,6 +126,7 @@
         }
         muteVideoChk.checked = false;
         formatOpt.value = 'mp4';
+        if(effectOpt) effectOpt.value = 'none';
     });
 
     async function executeFFmpeg(args, outName) {
@@ -198,6 +199,9 @@
         
         if(resizeOpt.value !== 'original') {
             filters.push(`scale=${resizeOpt.value}`);
+        }
+        if(effectOpt.value !== 'none') {
+            filters.push(effectOpt.value);
         }
         if(fmt === 'gif') {
             filters.push('fps=10', 'scale=320:-1:flags=lanczos', 'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse');
