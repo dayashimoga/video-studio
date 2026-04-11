@@ -35,19 +35,24 @@
     let duration = 0;
 
     // Load FFmpeg dynamically
+    let ffmpegLoading = false;
     async function loadFFmpeg() {
         if(ffmpegInst) return true;
+        if(ffmpegLoading) { // Prevent double-load on rapid uploads
+            while(ffmpegLoading) await new Promise(r => setTimeout(r, 200));
+            return !!ffmpegInst;
+        }
+        ffmpegLoading = true;
         loadingOverlay.classList.remove('hidden');
         try {
-            // Provide a graceful fallback to a promise race (timeout after 20s if CDN fails)
             const p = new Promise(async (resolve, reject) => {
-                const t = setTimeout(()=>reject(new Error("FFmpeg script CDN timeout")), 20000);
+                const t = setTimeout(()=>reject(new Error("FFmpeg script CDN timeout")), 30000);
                 try {
                     const ffmpegMod = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/esm/index.js');
                     const utilMod = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
                     clearTimeout(t);
                     resolve({ f: ffmpegMod.FFmpeg, util: utilMod.fetchFile });
-                } catch(e) { reject(e); }
+                } catch(e) { clearTimeout(t); reject(e); }
             });
 
             const lib = await p;
@@ -66,16 +71,25 @@
                 console.log(message);
             });
 
+            // Use single-threaded core if SharedArrayBuffer is unavailable
+            const useMT = typeof SharedArrayBuffer !== 'undefined';
+            const coreBase = useMT
+                ? 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/esm'
+                : 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+
             await ffmpegInst.load({
-                coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
-                wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm'
+                coreURL: coreBase + '/ffmpeg-core.js',
+                wasmURL: coreBase + '/ffmpeg-core.wasm',
+                ...(useMT ? { workerURL: coreBase + '/ffmpeg-core.worker.js' } : {})
             });
             
             loadingOverlay.classList.add('hidden');
+            ffmpegLoading = false;
             return true;
         } catch (e) {
-            console.error(e);
-            loadingOverlay.innerHTML = `<h2 class="text-neon-red">Error Loading Processing Core</h2><p class="mt-2 text-muted">Failed to load WebAssembly FFmpeg from CDN. Please check adblockers or network.</p><button onclick="location.reload()" class="btn btn-secondary mt-4">Retry</button>`;
+            console.error('FFmpeg load error:', e);
+            ffmpegLoading = false;
+            loadingOverlay.innerHTML = `<h2 class="text-neon-red">Error Loading Processing Core</h2><p class="mt-2 text-muted">Failed to load FFmpeg. This may be caused by adblockers, strict CORS policies, or an unsupported browser.</p><p class="mt-2 text-muted" style="font-size:0.8rem">${e.message || ''}</p><button onclick="location.reload()" class="btn btn-secondary mt-4">Retry</button>`;
             return false;
         }
     }
