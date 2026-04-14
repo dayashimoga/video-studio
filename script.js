@@ -58,24 +58,14 @@
         loadingOverlay.classList.remove('hidden');
         loadingOverlay.innerHTML = `<h2 style="color:#fff">⏳ Loading Video Engine...</h2><p class="mt-2 text-muted">This may take a few seconds on first load.</p>`;
         try {
-            // Load UMD bundles via script tag — avoids ESM Worker CORS issues
-            const cdnBases = [
-                'https://unpkg.com',
-                'https://cdn.jsdelivr.net/npm'
-            ];
-            let loaded = false;
-            for(const cdn of cdnBases) {
-                try {
-                    await loadScript(`${cdn}/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js`);
-                    await loadScript(`${cdn}/@ffmpeg/util@0.12.1/dist/umd/index.js`);
-                    loaded = true;
-                    break;
-                } catch(err) { console.warn("CDN source failed:", cdn, err); }
-            }
-            if(!loaded) throw new Error("All CDN sources failed. Check your internet connection or adblocker.");
+            // Load UMD bundles via script tag
+            const cdn = 'https://cdn.jsdelivr.net/npm';
+            await loadScript(`${cdn}/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js`);
+            await loadScript(`${cdn}/@ffmpeg/util@0.12.2/dist/umd/index.js`);
 
             FFmpeg = FFmpegWASM.FFmpeg;
             fetchFile = FFmpegUtil.fetchFile;
+            const toBlobURL = FFmpegUtil.toBlobURL;
             
             ffmpegInst = new FFmpeg();
             ffmpegInst.on('progress', ({ progress }) => {
@@ -85,41 +75,18 @@
             });
             ffmpegInst.on('log', ({ message }) => { console.log(message); });
 
-            // Load core — use toBlobURL to bypass CORS entirely
-            let coreLoaded = false;
-            const hasSAB = typeof SharedArrayBuffer !== 'undefined';
+            // Must use single-threaded core for Cloudflare Pages (no COOP/COEP headers for SharedArrayBuffer)
+            const baseURL = `${cdn}/@ffmpeg/core@0.12.6/dist/umd`;
             
-            // Try multi-threaded first if SharedArrayBuffer is available
-            if (hasSAB) {
-                try {
-                    await ffmpegInst.load({
-                        coreURL: await toBlobURL('https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.js', 'application/javascript'),
-                        wasmURL: await toBlobURL('https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.wasm', 'application/wasm'),
-                        workerURL: await toBlobURL('https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.worker.js', 'application/javascript')
-                    });
-                    coreLoaded = true;
-                } catch(e) { console.warn("Multi-threaded FFmpeg failed, trying single-threaded:", e); }
-            }
-            
-            // Fallback to Single-threaded
-            if (!coreLoaded) {
-                ffmpegInst = new FFmpeg();
-                ffmpegInst.on('progress', ({ progress }) => {
-                    const pct = Math.max(0, Math.min(100, Math.round(progress * 100)));
-                    exportProgress.style.width = pct + '%';
-                    exportPct.textContent = pct + '%';
-                });
-                try {
-                    await ffmpegInst.load({
-                        coreURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js', 'application/javascript'),
-                        wasmURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm', 'application/wasm')
-                    });
-                    coreLoaded = true;
-                } catch(e) { console.warn("Single-threaded FFmpeg also failed:", e); }
-            }
+            console.log("Downloading FFmpeg core as blobs to bypass CORS Worker block...");
+            const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'application/javascript');
+            const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
 
-            if(!coreLoaded) throw new Error("FFmpeg core could not be loaded. Your browser may not support WebAssembly, or a content blocker is interfering.");
-            
+            await ffmpegInst.load({
+                coreURL: coreURL,
+                wasmURL: wasmURL,
+            });
+
             loadingOverlay.classList.add('hidden');
             ffmpegLoadedFlag = true;
             ffmpegLoading = false;
@@ -129,18 +96,6 @@
             ffmpegLoading = false;
             loadingOverlay.innerHTML = `<h2 class="text-neon-red">⚠️ Video Engine Unavailable</h2><p class="mt-2 text-muted">${e.message || 'Failed to load FFmpeg.'}</p><p class="mt-2 text-muted" style="font-size:0.8rem">Try: disable adblocker, use Chrome/Edge, or check your connection.</p><button onclick="location.reload()" class="btn btn-secondary mt-4">🔄 Retry</button>`;
             return false;
-        }
-    }
-
-    async function toBlobURL(url, mime) {
-        try {
-            const res = await fetch(url);
-            if (!res.ok) throw new Error("fetch failed");
-            const buf = await res.arrayBuffer();
-            const blob = new Blob([buf], { type: mime });
-            return URL.createObjectURL(blob);
-        } catch (e) {
-            return url;
         }
     }
 
