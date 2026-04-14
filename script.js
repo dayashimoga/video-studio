@@ -34,9 +34,20 @@
     let activeFileName = '';
     let duration = 0;
 
-    // Load FFmpeg dynamically
+    // Load FFmpeg dynamically via UMD script tags (avoids ESM Worker CORS errors)
     let ffmpegLoadedFlag = false;
     let ffmpegLoading = false;
+    
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+        });
+    }
+
     async function loadFFmpeg() {
         if(ffmpegLoadedFlag && ffmpegInst) return true;
         if(ffmpegLoading) {
@@ -47,22 +58,24 @@
         loadingOverlay.classList.remove('hidden');
         loadingOverlay.innerHTML = `<h2 style="color:#fff">⏳ Loading Video Engine...</h2><p class="mt-2 text-muted">This may take a few seconds on first load.</p>`;
         try {
-            let ffmpegMod, utilMod;
-            const cdnSources = [
-                ['https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/esm/index.js', 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js'],
-                ['https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/esm/index.js', 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js']
+            // Load UMD bundles via script tag — avoids ESM Worker CORS issues
+            const cdnBases = [
+                'https://unpkg.com',
+                'https://cdn.jsdelivr.net/npm'
             ];
-            for(const [ffUrl, utilUrl] of cdnSources) {
+            let loaded = false;
+            for(const cdn of cdnBases) {
                 try {
-                    ffmpegMod = await import(ffUrl);
-                    utilMod = await import(utilUrl);
+                    await loadScript(`${cdn}/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js`);
+                    await loadScript(`${cdn}/@ffmpeg/util@0.12.1/dist/umd/index.js`);
+                    loaded = true;
                     break;
-                } catch(err) { console.warn("CDN source failed:", ffUrl, err); }
+                } catch(err) { console.warn("CDN source failed:", cdn, err); }
             }
-            if(!ffmpegMod || !utilMod) throw new Error("All CDN sources failed. Check your internet connection or adblocker.");
+            if(!loaded) throw new Error("All CDN sources failed. Check your internet connection or adblocker.");
 
-            FFmpeg = ffmpegMod.FFmpeg;
-            fetchFile = utilMod.fetchFile;
+            FFmpeg = FFmpegWASM.FFmpeg;
+            fetchFile = FFmpegUtil.fetchFile;
             
             ffmpegInst = new FFmpeg();
             ffmpegInst.on('progress', ({ progress }) => {
@@ -72,10 +85,11 @@
             });
             ffmpegInst.on('log', ({ message }) => { console.log(message); });
 
+            // Load core — use toBlobURL to bypass CORS entirely
+            let coreLoaded = false;
             const hasSAB = typeof SharedArrayBuffer !== 'undefined';
-            let loaded = false;
-
-            // Try Multi-threaded first if SharedArrayBuffer is available
+            
+            // Try multi-threaded first if SharedArrayBuffer is available
             if (hasSAB) {
                 try {
                     await ffmpegInst.load({
@@ -83,12 +97,12 @@
                         wasmURL: await toBlobURL('https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.wasm', 'application/wasm'),
                         workerURL: await toBlobURL('https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.worker.js', 'application/javascript')
                     });
-                    loaded = true;
+                    coreLoaded = true;
                 } catch(e) { console.warn("Multi-threaded FFmpeg failed, trying single-threaded:", e); }
             }
             
             // Fallback to Single-threaded
-            if (!loaded) {
+            if (!coreLoaded) {
                 ffmpegInst = new FFmpeg();
                 ffmpegInst.on('progress', ({ progress }) => {
                     const pct = Math.max(0, Math.min(100, Math.round(progress * 100)));
@@ -100,11 +114,11 @@
                         coreURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js', 'application/javascript'),
                         wasmURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm', 'application/wasm')
                     });
-                    loaded = true;
+                    coreLoaded = true;
                 } catch(e) { console.warn("Single-threaded FFmpeg also failed:", e); }
             }
 
-            if(!loaded) throw new Error("FFmpeg core could not be loaded. Your browser may not support WebAssembly, or a content blocker is interfering.");
+            if(!coreLoaded) throw new Error("FFmpeg core could not be loaded. Your browser may not support WebAssembly, or a content blocker is interfering.");
             
             loadingOverlay.classList.add('hidden');
             ffmpegLoadedFlag = true;
@@ -129,6 +143,10 @@
             return url;
         }
     }
+
+    // Eagerly start loading FFmpeg on page load so it's ready when user uploads
+    loadFFmpeg();
+
 
     async function handleFile(file) {
         if(!file) return;
