@@ -1,7 +1,7 @@
 /* ==============================================
-   QuickUtils Core JS Library v2.2
+   QuickUtils Core JS Library v2.3
    Shared utilities for all interactive projects
-   Updated: 2026-04-14 - Deploy Full Update
+   Updated: 2026-04-14 - Limit Resolved Full Deploy
    ============================================== */
 'use strict';
 
