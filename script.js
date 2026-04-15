@@ -61,11 +61,25 @@
             // Load UMD bundles via script tag
             const cdn = 'https://cdn.jsdelivr.net/npm';
             await loadScript(`${cdn}/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js`);
-            await loadScript(`${cdn}/@ffmpeg/util@0.12.2/dist/umd/index.js`);
+            // await loadScript(`${cdn}/@ffmpeg/util@0.12.2/dist/umd/index.js`);
 
             FFmpeg = FFmpegWASM.FFmpeg;
-            fetchFile = FFmpegUtil.fetchFile;
-            const toBlobURL = FFmpegUtil.toBlobURL;
+            
+            // Native Polyfill for FFmpegUtil to bypass UMD export failures
+            fetchFile = async (file) => {
+                if (typeof file === 'string') {
+                    const res = await fetch(file);
+                    return new Uint8Array(await res.arrayBuffer());
+                }
+                return new Uint8Array(await file.arrayBuffer());
+            };
+            
+            const toBlobURL = async (url, mimeType) => {
+                const res = await fetch(url);
+                const buf = await res.arrayBuffer();
+                const blob = new Blob([buf], { type: mimeType });
+                return URL.createObjectURL(blob);
+            };
             
             ffmpegInst = new FFmpeg();
             ffmpegInst.on('progress', ({ progress }) => {
