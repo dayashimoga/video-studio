@@ -1,0 +1,13 @@
+[
+  {
+    "auth": "None",
+    "category": "Web & Text",
+    "cors": "unknown",
+    "description": "A static entry",
+    "https": true,
+    "pricing": "Free",
+    "slug": "wikipedia-dumps",
+    "title": "Wikipedia Dumps",
+    "url": "https://example.com"
+  }
+]
