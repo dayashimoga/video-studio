@@ -163,11 +163,13 @@
 
 
 
+
+
 <!-- QuickUtils Network Promo -->
-<div id="qu-promo-ribbon" style="margin-top:4rem; padding:2rem 1rem; background:rgba(0,0,0,0.05); border-top:1px solid rgba(128,128,128,0.2); text-align:center; font-family:sans-serif;">
-   <h3 style="margin:0 0 1rem 0; font-size:1.1rem; opacity:0.8; font-weight:600;">🚀 Explore the QuickUtils App Network</h3>
-   <p style="font-size:0.9rem; opacity:0.7; max-width:600px; margin:0 auto 1.5rem auto;">Discover 90+ professional, zero-friction tools built to accelerate your workflow.</p>
-   <div style="display:flex; flex-wrap:wrap; gap:0.5rem; justify-content:center; max-width:1200px; margin:0 auto; padding-bottom: 2rem;">
+<div id="qu-promo-ribbon" style="position:relative; z-index:50; margin-top:2rem; padding:0; background:#111; border-top:1px solid rgba(128,128,128,0.3); text-align:center; font-family:sans-serif;">
+   <button onclick="var c=document.getElementById('qu-promo-content');c.style.display=c.style.display==='none'?'block':'none';this.textContent=c.style.display==='none'?'🚀 Explore 90+ QuickUtils Apps ▼':'▲ Close'" style="width:100%;padding:10px;background:transparent;border:none;color:#aaa;cursor:pointer;font-size:0.85rem;font-family:inherit;">🚀 Explore 90+ QuickUtils Apps ▼</button>
+   <div id="qu-promo-content" style="display:none; padding:1rem 1rem 2rem 1rem;">
+   <div style="display:flex; flex-wrap:wrap; gap:0.5rem; justify-content:center; max-width:1200px; margin:0 auto;">
       <a href="https://roomplanner.quickutils.top" target="_blank" style="padding: 4px 10px; background: rgba(128,128,128,0.1); border-radius: 8px; font-size: 0.8rem; text-decoration: none; color: inherit; opacity: 0.8; transition: all 0.2s; white-space: nowrap;">3D Room Planner</a>
       <a href="https://apistatus.quickutils.top" target="_blank" style="padding: 4px 10px; background: rgba(128,128,128,0.1); border-radius: 8px; font-size: 0.8rem; text-decoration: none; color: inherit; opacity: 0.8; transition: all 0.2s; white-space: nowrap;">API Status Directory</a>
       <a href="https://ascii.quickutils.top" target="_blank" style="padding: 4px 10px; background: rgba(128,128,128,0.1); border-radius: 8px; font-size: 0.8rem; text-decoration: none; color: inherit; opacity: 0.8; transition: all 0.2s; white-space: nowrap;">ASCII Art Studio</a>
@@ -264,8 +266,11 @@
       <a href="https://clock.quickutils.top" target="_blank" style="padding: 4px 10px; background: rgba(128,128,128,0.1); border-radius: 8px; font-size: 0.8rem; text-decoration: none; color: inherit; opacity: 0.8; transition: all 0.2s; white-space: nowrap;">World Clock</a>
 
    </div>
+   </div>
 </div>
 <!-- /QuickUtils Network Promo -->
+
+
 
 
 
