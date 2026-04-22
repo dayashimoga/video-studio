@@ -321,6 +321,48 @@ const QU = (() => {
     });
   }
 
+  // ── Smart Cross-Promotion Footer ──
+  function initCrossPromo() {
+    // Only run if not already injected
+    if (document.getElementById('quCrossPromo')) return;
+    
+    // Pick 3 random unique tools from the network (excluding current domain)
+    const currentHost = window.location.hostname;
+    const available = NETWORK_SITES.filter(s => !s.url.includes(currentHost));
+    const promos = [];
+    for(let i=0; i<3 && available.length>0; i++) {
+        const idx = Math.floor(Math.random() * available.length);
+        promos.push(available.splice(idx, 1)[0]);
+    }
+
+    if (promos.length === 0) return;
+
+    const promoDiv = document.createElement('div');
+    promoDiv.id = 'quCrossPromo';
+    promoDiv.style.cssText = 'width: 100%; padding: 1rem; margin-top: 3rem; border-top: 1px solid var(--border, rgba(255,255,255,0.1)); display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); font-family: var(--font-sans, sans-serif);';
+    
+    let html = `<div style="font-size: 0.85rem; color: var(--text-muted, #888); margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">More QuickUtils Tools</div>`;
+    html += `<div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">`;
+    
+    promos.forEach(p => {
+        html += `<a href="${p.url}" target="_blank" style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--glass-bg, rgba(20,20,30,0.6)); border: 1px solid var(--border, rgba(255,255,255,0.1)); border-radius: 8px; color: var(--text, #fff); text-decoration: none; font-size: 0.9rem; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.2);" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='var(--accent, #6366f1)';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='var(--border, rgba(255,255,255,0.1))';">
+            <span style="font-size: 1.1rem;">${p.emoji}</span>
+            <span>${p.name}</span>
+        </a>`;
+    });
+    
+    html += `</div>`;
+    promoDiv.innerHTML = html;
+    
+    // Append to main container if it exists, otherwise to body
+    const main = document.querySelector('main');
+    if (main) {
+        main.appendChild(promoDiv);
+    } else {
+        document.body.appendChild(promoDiv);
+    }
+  }
+
   // ── Keyboard Shortcuts ──
   let shortcutsMap = {};
 
@@ -467,7 +509,10 @@ const QU = (() => {
     initTheme(opts.themeBtn || '#themeBtn');
     if (opts.gaId) initAnalytics(opts.gaId);
     if (opts.kofi !== false) initKofi(opts.kofiUser || 'dayatin');
-    if (opts.discover !== false) initNetworkLauncher();
+    if (opts.discover !== false) {
+      initNetworkLauncher();
+      initCrossPromo(); // Inject the non-obstructive cross-promotion footer
+    }
     initKeyboardShortcuts();
     registerShortcuts({ '?': 'Show keyboard shortcuts' });
     initSessionTimer();
