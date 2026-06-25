@@ -511,7 +511,7 @@ const QU = (() => {
     if (opts.kofi !== false) initKofi(opts.kofiUser || 'dayatin');
     if (opts.discover !== false) {
       initNetworkLauncher();
-      initCrossPromo(); // Inject the non-obstructive cross-promotion footer
+      // initCrossPromo(); // Disabled: excessive cross-links flagged as low-value by AdSense
     }
     initKeyboardShortcuts();
     registerShortcuts({ '?': 'Show keyboard shortcuts' });
